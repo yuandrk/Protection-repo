@@ -6,7 +6,6 @@
 # Version: 1.0.2
 # License: GNU General Public License (GPL)
 
-# Print header function
 print_header() {
     echo "========================================"
     echo " Gitleaks Installation Script"
@@ -18,19 +17,11 @@ print_header() {
     echo "========================================"
 }
 
-############################################################
-############################################################
-#                    Main program                          #
-############################################################
-############################################################
-
 # Function to check for sudo access
 check_sudo() {
     echo "========================================"
     echo " Checking for sudo permissions..."
     echo "========================================"
-    # The 'true' command does nothing and always succeeds.
-    # We use it here to check if the user can execute commands with sudo.
     if sudo -n true 2>/dev/null; then
         echo "Sudo access confirmed."
     else
@@ -41,70 +32,124 @@ check_sudo() {
 
 # Function to install Gitleaks
 install_gitleaks() {
-    os=$(uname -s | tr '[:upper:]' '[:lower:]')
-    arch=$(uname -m)
+    OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+    ARCH=$(uname -m)
 
-    case "$arch" in
-        "aarch64") arch="arm64" ;;
-        "x86_64") arch="x64" ;;
+    case "$ARCH" in
+        aarch64) ARCH="arm64" ;;
+        x86_64) ARCH="x64" ;;
     esac
 
     echo "========================================"
-    echo " Installing Gitleaks for $os-$arch...."
+    echo " Installing Gitleaks for $OS-$ARCH"
     echo "========================================"
-    # Download the latest version of Gitleaks
-    download_url=$(curl -sL https://api.github.com/repos/zricethezav/gitleaks/releases/latest | grep -o "https://[^ \"]*(${os}.*${arch})[^ \"]*" | cut -d '"' -f 1)
-    
+    echo $ARCH $OS
+    LATEST_RELEASE_DATA=$(curl -sL https://api.github.com/repos/zricethezav/gitleaks/releases/latest)
+    download_url=$(echo "$LATEST_RELEASE_DATA" | grep "browser_download_url.*${OS}.*${ARCH}" | cut -d '"' -f 4 | head -n 1)
+
     if [ -z "$download_url" ]; then
         echo "Failed to find a download link for Gitleaks."
         exit 1
     fi
 
-    echo "Download URL found: $download_url"
     filename=$(basename "$download_url")
-    echo "Downloading $filename..."
+    wget -O "$filename" "$download_url" || { echo "Failed to download Gitleaks."; exit 1; }
 
-    if ! wget -O "$filename" "$download_url"; then
-        echo "Failed to download Gitleaks."
-        exit 1
-    fi
+    tar -xvf "$filename" -C /usr/local/bin/ || { echo "Failed to extract Gitleaks."; exit 1; }
 
-    echo "Extracting $filename to /usr/local/bin/..."
-    if ! tar -xvf "$filename" -C /usr/local/bin/; then
-        echo "Failed to extract Gitleaks."
-        exit 1
-    fi
+    chmod +x /usr/local/bin/gitleaks || { echo "Failed to set execute permissions for Gitleaks."; exit 1; }
 
-    if ! chmod +x /usr/local/bin/gitleaks; then
-        echo "Failed to set execute permissions for Gitleaks."
-        exit 1
-    fi
-
-    if ! command -v gitleaks > /dev/null; then
-        echo "Gitleaks installation failed."
-        exit 1
-    fi
+    command -v gitleaks > /dev/null || { echo "Gitleaks installation failed."; exit 1; }
 
     echo "Gitleaks successfully installed!"
     rm "$filename"
 }
 
-# ... Rest of the functions (install_pre_commit, setting_pre_commit, setting_gitleaks_config) ...
+# Function to install pre-commit
+install_pre_commit() {
+    echo "========================================"
+    echo " Installing pre-commit..."
+    echo "========================================"
 
-# First, check for sudo permissions
+    if ! command -v pip > /dev/null; then
+        echo "pip is not installed. Attempting to install pip..."
+        sudo apt-get install -y python3-pip || { echo "Failed to install pip."; exit 1; }
+    fi
+
+    pip install pre-commit || { echo "Failed to install pre-commit."; exit 1; }
+
+    echo "pre-commit successfully installed."
+    pre-commit --version
+}
+
+# Function to set up pre-commit
+setting_pre_commit() {
+    echo "========================================"
+    echo "Setting up pre-commit..."
+    echo "========================================"
+
+    if ! command -v pre-commit > /dev/null; then
+        echo "pre-commit is not installed. Exiting."
+        exit 1
+    fi
+
+    if ! command -v git > /dev/null; then
+        echo "git is not installed. Exiting."
+        exit 1
+    fi
+
+    if [ ! -d .git ]; then
+        echo "No .git directory found. Provide path to your git repo:"
+        read -r git_path
+        cd "$git_path" || { echo "Invalid path. Exiting."; exit 1; }
+
+        [ -d .git ] || { echo "Invalid path. Exiting."; exit 1; }
+    fi
+
+    echo "========================================"
+    echo "Install Gitleaks script"
+    echo "========================================"
+    cat << 'EOF' > .git/hooks/gitleaks.sh
+#!/bin/sh
+
+# Getting status from git config
+gitleaksEnabled=$(git config --get gitleaks.enable)
+
+if [ "$gitleaksEnabled" = "false" ]; then
+    echo "Gitleaks check is disabled"
+    exit 0
+fi
+
+# Run gitleaks
+gitleaks detect -v
+EOF
+
+    chmod +x .git/hooks/gitleaks.sh
+}
+
+# Function to set up Gitleaks config
+setting_gitleaks_config() {
+    echo "========================================"
+    echo "Setting up Gitleaks config..."
+    echo "========================================"
+    cat << EOF > .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.16.1
+    hooks:
+      - id: gitleaks
+        entry: bash -c '.git/hooks/gitleaks.sh'
+        language: system
+EOF
+
+    echo ".pre-commit-config.yaml has been configured."
+    pre-commit install
+}
+
+# Run functions
 check_sudo
-
-# Print the header
 print_header
-
-# Run the installation function
 install_gitleaks
-
-# Run the installation function
 install_pre_commit
-
-# Run the function
 setting_pre_commit
-
-# Setting Gitleaks config 
 setting_gitleaks_config
