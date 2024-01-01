@@ -110,9 +110,9 @@ setting_pre_commit() {
     echo "Install Gitleaks script"
     echo "========================================"
     cat << 'EOF' > .git/hooks/gitleaks.sh
-#!/bin/sh
+#!/bin/bash
 
-# Getting status from git config
+# get status gitleaks з git config
 gitleaksEnabled=$(git config --get gitleaks.enable)
 
 if [ "$gitleaksEnabled" = "false" ]; then
@@ -120,8 +120,22 @@ if [ "$gitleaksEnabled" = "false" ]; then
     exit 0
 fi
 
-# Run gitleaks
-gitleaks detect -v
+# Save staged changes and index to a temporary stash working directory
+git stash save -q --keep-index
+
+# Run gitleaks on whole repo
+gitleaksResult=$(gitleaks detect --source="." --verbose)
+
+# 
+git stash pop -q
+
+# Check if gitleaks detected any secrets
+if [ -n "$gitleaksResult" ]; then
+    echo "Gitleaks detected secrets in staged files"
+    echo "$gitleaksResult"
+    exit 1
+fi
+
 EOF
 
     chmod +x .git/hooks/gitleaks.sh
