@@ -158,6 +158,7 @@ EOF
 
     echo ".pre-commit-config.yaml has been configured."
     pre-commit install
+    git config --local gitleaks.enable true
 }
 
 # Run functions
