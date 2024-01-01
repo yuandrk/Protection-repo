@@ -47,15 +47,15 @@ install_gitleaks() {
     local os=$(uname -s | tr '[:upper:]' '[:lower:]')
     local arch=$(uname -m)
 
-    # Adjusting for ARM64 architecture
-    if [ "$arch" == "aarch64" ]; then
+    if [[ "$arch" == "aarch64" ]]; then
         arch="arm64"
     fi
 
     # Adjusting for x86_64 architecture   
-    if [ "$arch" == "x86_64" ]; then
+    if [[ "$arch" == "x86_64" ]]; then
          arch="x64"
     fi  
+
     echo -e "\e[1;34m========================================\e[0m"
     echo -e "\e[1;33m Installing Gitleaks for $os-$arch....  \e[0m"
     echo -e "\e[1;34m========================================\e[0m"
