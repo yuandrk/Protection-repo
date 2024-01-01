@@ -6,31 +6,17 @@
 # Version: 1.0.2
 # License: GNU General Public License (GPL)
 
-# Main script
-echo "Gitleaks installation script"
-echo "Version 1.0.1"
-echo "Author: Yurii Andriuk"
-echo "yurii.andriuk@gmail.com" 
-echo "Date Created: 01-01-24"
-echo "Description: Gitleaks installation script"
+print_header() {
+    echo -e "\e[1;34m========================================\e[0m"
+    echo -e "\e[1;33m Gitleaks Installation Script\e[0m"
+    echo -e "\e[1;34m========================================\e[0m"
+    echo -e "\e[1;32m Version:\e[0m 1.0.1"
+    echo -e "\e[1;32m Author:\e[0m Yurii Andriuk (yurii.andriuk@gmail.com)"
+    echo -e "\e[1;32m Date Created:\e[0m 01-01-24"
+    echo -e "\e[1;32m Description:\e[0m This script installs Gitleaks."
+    echo -e "\e[1;34m========================================\e[0m"
+}
 
-
-############################################################
-#                            Help                          #
-############################################################
-# Help()
-# {
-#    # Display Help
-#    echo "Add description of the script functions here."
-#    echo
-#    echo "Syntax: scriptTemplate [-g|h|v|V]"
-#    echo "options:"
-#    echo "g     Print the GPL license notification."
-#    echo "h     Print this Help."
-#    echo "v     Verbose mode."
-#    echo "V     Print software version and exit."
-#    echo
-# }
 
 ############################################################
 ############################################################
@@ -41,8 +27,9 @@ echo "Description: Gitleaks installation script"
 # Function to check for sudo access
 check_sudo() {
     # Print a message to let the user know what's happening
-    echo "Checking for sudo permissions..."
-
+    echo -e "\e[1;34m========================================\e[0m"
+    echo -e "\e[1;33m Checking for sudo permissions... \e[0m"
+    echo -e "\e[1;34m========================================\e[0m"
     # The 'true' command does nothing and always succeeds.
     # We use it here to check if the user can execute commands with sudo.
     if sudo -n true 2>/dev/null; then
@@ -69,9 +56,9 @@ install_gitleaks() {
     if [ "$arch" == "x86_64" ]; then
          arch="x64"
     fi  
-
-    echo "Installing Gitleaks for $os-$arch..."
-
+    echo -e "\e[1;34m========================================\e[0m"
+    echo -e "\e[1;33m Installing Gitleaks for $os-$arch....  \e[0m"
+    echo -e "\e[1;34m========================================\e[0m"
     # Download the latest version of Gitleaks
     local download_url=$(curl -sL https://api.github.com/repos/zricethezav/gitleaks/releases/latest | grep -oP "https://[^ \"]*(${os}.*${arch})[^ \"]*" | cut -d '"' -f 1)
     
@@ -106,12 +93,15 @@ install_gitleaks() {
     fi
 
     echo "Gitleaks successfully installed!"
+    rm $filename
 }
 
 
 # Function to install pre-commit
 install_pre_commit() {
-    echo "Installing pre-commit..."
+    echo -e "\e[1;34m========================================\e[0m"
+    echo -e "\e[1;33m Installing pre-commit... \e[0m"
+    echo -e "\e[1;34m========================================\e[0m"
 
     # Check if pip is installed
     if ! command -v pip > /dev/null; then
@@ -133,8 +123,9 @@ install_pre_commit() {
 }
 
 setting_pre_commit() {
+    echo -e "\e[1;34m========================================\e[0m"
     echo "Setting up pre-commit..."
-
+    echo -e "\e[1;34m========================================\e[0m"
     # Check if pre-commit is installed
     if ! command -v pre-commit > /dev/null; then
         echo "pre-commit is not installed. Exiting."
@@ -160,8 +151,10 @@ setting_pre_commit() {
         fi
     fi
 
-    echo "Install Gitleaks script"
-    cat << EOF > .git/hooks/gitleaks.sh
+echo -e "\e[1;34m========================================\e[0m"
+echo "Install Gitleaks script"
+echo -e "\e[1;34m========================================\e[0m"
+cat << 'EOF' > .git/hooks/gitleaks.sh
 #!/bin/bash
 
 # Getting status from git config
@@ -172,17 +165,18 @@ if [ "$gitleaksEnabled" = "false" ]; then
     exit 0
 fi
 
-# Rub gitleaks
-gitleaks detect -v 
-
-EOF 
+# Run gitleaks
+gitleaks detect -v
+EOF
 
 chmod +x .git/hooks/gitleaks.sh
 
 }
 
 setting_gitleaks_config() {
+    echo -e "\e[1;34m========================================\e[0m"
     echo "Setting up Gitleaks config..."
+    echo -e "\e[1;34m========================================\e[0m"
     # Write configuration to .pre-commit-config.yaml
     echo "Writing configuration to .pre-commit-config.yaml..."
     cat << EOF > .pre-commit-config.yaml
@@ -199,34 +193,22 @@ EOF
     echo ".pre-commit-config.yaml has been configured."
     pre-commit install
 }
+
+
 # First, check for sudo permissions
 check_sudo
 
-# Run the installation function
-# install_gitleaks
+# Print the header
+print_header
 
 # Run the installation function
-# install_pre_commit
+ install_gitleaks
+
+# Run the installation function
+install_pre_commit
 
 # Run the function
 setting_pre_commit
 
+# Setting gitleaks config 
 setting_gitleaks_config
-
-
-############################################################
-# Process the input options. Add options as needed.        #
-############################################################
-# Get the options
-# while getopts ":hn:" option; do
-#    case $option in
-#       h) # display Help
-#          Help
-#          exit;;
-#       n) # Enter a name
-#          Name=$OPTARG;;
-#      \?) # Invalid option
-#          echo "Error: Invalid option"
-#          exit;;
-#    esac
-# done
